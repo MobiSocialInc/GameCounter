@@ -1,0 +1,157 @@
+/**
+ * Game Counter is a prototype document-driven app.
+ */
+
+//////////////////////////////
+///// Framework Code ///////
+//////////////////////////////
+
+var documentApi;
+var myDoc;
+var myDocId;
+
+function watchDocument(docref, OnUpdate) {
+  documentApi.watch(docref, function(updatedDocRef) {
+    if (docref != myDocId) {
+      console.log("Wrong document!!");
+    } else {
+      documentApi.get(docref, OnUpdate);
+    }
+  }, function(result) {
+    var timestamp = result.Expires;
+    var expires = timestamp - new Date().getTime();
+    var timeout = 0.8 * expires;
+    setTimeout(function() {
+      watchDocument(docref, OnUpdate);
+    }, timeout);
+  }, Error);
+}
+
+function initDocument() {
+  if (TwoPlus.isInstalled()) {
+    documentApi = TwoPlus.document;
+    _loadDocument();
+  } else {
+    var yjclient = YeouijuClient.getInstance();
+    yjclient.setPipelineProcessors();
+    documentApi = yjclient.document;
+    yjclient.ensureRegistration(function() {
+      yjclient.syncRealtime();
+      _loadDocument();
+    }, Error);
+  }
+}
+
+function hasDocument() {
+	var docIdParam = window.location.hash.indexOf("/docId/");
+ 	return (docIdParam != -1);
+}
+
+function getDocumentReference() {
+	var docIdParam = window.location.hash.indexOf("/docId/");
+	if (docIdParam == -1) return false;
+	var docId = window.location.hash.substring(docIdParam+7);
+    var end = docId.indexOf("/");
+    if (end != -1) {
+      docId = docId.substring(0, end);
+    }
+    return docId;
+}
+
+function _loadDocument() {
+  if (hasDocument()) {
+    myDocId = getDocumentReference();
+    documentApi.get(myDocId, ReceiveUpdate);
+    watchDocument(myDocId, ReceiveUpdate);
+  } else {
+    documentApi.create(function(d) {
+      myDocId = d.Document;
+      location.hash = "#/docId/" + myDocId;
+      documentApi.update(myDocId, Replace, InitialDocument(), function() {
+        documentApi.get(myDocId, DocumentCreated);
+      });
+      watchDocument(myDocId, ReceiveUpdate);
+    }, function(e) {
+      alert("error" + e);
+    });
+  }
+}
+
+//////////////////////////////
+///// Application Code ///////
+//////////////////////////////
+
+function Error(e) {
+  alert("Error!");
+}
+
+function Replace(old, params) { return params; }
+
+var numPlayers;
+
+function InitialDocument() {
+	var initialLife = [];
+	for (i = 0; i < numPlayers; i++) {
+		initialLife.push(20);
+	}
+
+	return {
+  	  life: initialLife
+     };
+}
+
+function DocumentCreated(doc) {
+	if (TwoPlus.isInstalled()) {
+		var rdl = TwoPlus.createRDL({
+			"noun": "Game Counter",
+			"displayTitle": "Game Counter",
+			"displayThumbnailUrl": "http://upload.wikimedia.org/wikipedia/en/a/aa/Magic_the_gathering-card_back.jpg",
+			"displayText": "Click to join the game counter!",
+			"callback": window.location.href,
+		});
+		TwoPlus.setPasteboard(rdl);
+		TwoPlus.exit();
+	} else {
+		ReceiveUpdate(doc);
+	}
+}
+
+function ReceiveUpdate(doc) {
+  myDoc = doc;
+  Render(doc);
+}
+
+function Render(state) {
+  var html = "<div class='player'>";
+  for (i = 0; i < state.life.length; i++) {
+    var cname = "tile_" + i;
+    html += "<input class='player' id='"+cname+"' type='text' value='" + state.life[i] + "'/>";
+    html += "<button onclick='IncrementCounter(" + i + ",-1)'>-</button>";
+    html += "<button onclick='IncrementCounter(" + i + ",+1)'>+</button>";
+    html += "<br/>";
+  }
+  html += "</div>";
+  $("#app").html(html);
+}
+
+function StartGame(players) {
+	numPlayers = players;
+	initDocument();
+}
+
+function IncrementCounter(player, amount) {
+	myDoc.life[player] += amount;
+	documentApi.update(myDocId, Replace, myDoc, ReceiveUpdate);
+}
+
+function ShowSettings() {
+	$("#app").html($("#settings_template").html());
+}
+
+TwoPlus.ready(function() {
+  if (hasDocument()) {
+  	initDocument();
+  } else {
+  	ShowSettings();
+  }
+});
