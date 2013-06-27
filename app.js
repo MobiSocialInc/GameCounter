@@ -67,7 +67,7 @@ function _loadDocument() {
     documentApi.create(function(d) {
       myDocId = d.Document;
       location.hash = "#/docId/" + myDocId;
-      documentApi.update(myDocId, Replace, InitialDocument(), function() {
+      documentApi.update(myDocId, function(o, p) { return p; }, InitialDocument(), function() {
         documentApi.get(myDocId, DocumentCreated);
       });
       watchDocument(myDocId, ReceiveUpdate);
@@ -149,6 +149,17 @@ function ShowSettings() {
 }
 
 TwoPlus.ready(function() {
+  // Use this to link an account to your browser's device token for development purposes.
+  /*
+  var link = { "Identity" : "email:YOUR_EMAIL_HERE@gmail.com"};
+  YeouijuClient.getInstance().post("/a/api/0/link?f=sif", link,
+  function() {
+    alert("Yay! we sent an email to get this account linked");
+  }, function() {
+    alert("Booo! We failed to link the account.");
+  });
+  */
+  
   if (hasDocument()) {
   	initDocument();
   } else {
