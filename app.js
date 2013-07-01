@@ -81,8 +81,8 @@ function _loadDocument() {
 //Assumes idempotency!
 function ApplyUpdate(params) {
   Update(myDoc, params);
-	documentApi.update(myDocId, Update, params, function() {
-	}, function(e) {});
+  ReceiveUpdate(myDoc);
+	documentApi.update(myDocId, Update, params, function() {}, function(e) {});
 }
 
 
