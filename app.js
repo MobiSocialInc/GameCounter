@@ -67,7 +67,7 @@ function _loadDocument() {
     documentApi.create(function(d) {
       myDocId = d.Document;
       location.hash = "#/docId/" + myDocId;
-      documentApi.update(myDocId, function(o, p) { return p; }, InitialDocument(), function() {
+      documentApi.update(myDocId, function(o,p){return p},  InitialDocument(), function() {
         documentApi.get(myDocId, DocumentCreated);
       });
       watchDocument(myDocId, ReceiveUpdate);
@@ -77,6 +77,15 @@ function _loadDocument() {
   }
 }
 
+
+//Assumes idempotency!
+function ApplyUpdate(params) {
+  Update(myDoc, params);
+	documentApi.update(myDocId, Update, params, function() {
+	}, function(e) {});
+}
+
+
 //////////////////////////////
 ///// Application Code ///////
 //////////////////////////////
@@ -85,7 +94,10 @@ function Error(e) {
   alert("Error!");
 }
 
-function Replace(old, params) { return params; }
+function Update(doc, params) {
+  doc.life[params.player] = doc.life[params.player] + params.amount;
+  return doc;
+}
 
 var numPlayers;
 
@@ -97,7 +109,7 @@ function InitialDocument() {
 
 	return {
   	  life: initialLife
-     };
+    };
 }
 
 function DocumentCreated(doc) {
@@ -127,7 +139,7 @@ function Render(state) {
     var cname = "tile_" + i;
     html += "<input class='player' id='"+cname+"' type='text' value='" + state.life[i] + "'/>";
     html += "<button onclick='IncrementCounter(" + i + ",-1)'>-</button>";
-    html += "<button onclick='IncrementCounter(" + i + ",+1)'>+</button>";
+    html += "<button onclick='IncrementCounter(" + i + ", 1)'>+</button>";
     html += "<br/>";
   }
   html += "</div>";
@@ -140,8 +152,7 @@ function StartGame(players) {
 }
 
 function IncrementCounter(player, amount) {
-	myDoc.life[player] += amount;
-	documentApi.update(myDocId, Replace, myDoc, ReceiveUpdate);
+	ApplyUpdate({ "player" : player, "amount" : amount });
 }
 
 function ShowSettings() {
@@ -159,7 +170,7 @@ TwoPlus.ready(function() {
     alert("Booo! We failed to link the account.");
   });
   */
-  
+
   if (hasDocument()) {
   	initDocument();
   } else {
