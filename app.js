@@ -195,3 +195,8 @@ TwoPlus.ready(function() {
   	ShowSettings();
   }
 });
+
+// fastclick gets rid of touch lag for simple webapps.
+window.addEventListener('load', function() {
+    FastClick.attach(document.body);
+}, false);
