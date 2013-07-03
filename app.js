@@ -9,6 +9,8 @@
 var documentApi;
 var myDoc;
 var myDocId;
+var functionQueue = [];
+
 
 function watchDocument(docref, OnUpdate) {
   documentApi.watch(docref, function(updatedDocRef) {
@@ -77,12 +79,32 @@ function _loadDocument() {
   }
 }
 
+function sendUpdates() {
+  var f = function(o,p) {
+    for (i = 0; i < p.length; i++)
+      p[i][0](o,p[i][1]);
+    return o;
+  };
 
-//Assumes idempotency!
-function ApplyUpdate(params) {
-  Update(myDoc, params);
+  var p = JSON.parse(JSON.stringify(functionQueue));
+  functionQueue = [];
+
+  var s = function() {
+  }
+
+  var e = function(e) {
+    functionQueue = p;
+  }
+
+  documentApi.update(myDocId, f, p, s, e);
+}
+
+// Optimistic apply
+function ApplyUpdate(func, params) {
+  functionQueue.push([func, params]);
   ReceiveUpdate(myDoc);
-	documentApi.update(myDocId, Update, params, function() {}, function(e) {});
+
+  sendUpdates();
 }
 
 
@@ -92,11 +114,6 @@ function ApplyUpdate(params) {
 
 function Error(e) {
   alert("Error!");
-}
-
-function Update(doc, params) {
-  doc.life[params.player] = doc.life[params.player] + params.amount;
-  return doc;
 }
 
 var numPlayers;
@@ -129,7 +146,11 @@ function DocumentCreated(doc) {
 }
 
 function ReceiveUpdate(doc) {
-  myDoc = doc;
+  mydoc = doc;
+  for (i=0;i<functionQueue.length;i++) {
+    var t = functionQueue[i];
+    t[0](mydoc, t[1]);
+  }
   Render(doc);
 }
 
@@ -152,7 +173,8 @@ function StartGame(players) {
 }
 
 function IncrementCounter(player, amount) {
-	ApplyUpdate({ "player" : player, "amount" : amount });
+  var f = function(o,p){ o.life[p.player] = o.life[p.player] + p.amount; return doc; };
+	ApplyUpdate(f, { "player" : player, "amount" : amount });
 }
 
 function ShowSettings() {
