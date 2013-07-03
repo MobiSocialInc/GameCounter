@@ -69,7 +69,7 @@ function _loadDocument() {
     documentApi.create(function(d) {
       myDocId = d.Document;
       location.hash = "#/docId/" + myDocId;
-      documentApi.update(myDocId, function(o,p){return p},  InitialDocument(), function() {
+      documentApi.update(myDocId, InitialDocument, InitialParameters(), function() {
         documentApi.get(myDocId, DocumentCreated);
       });
       watchDocument(myDocId, ReceiveUpdate);
@@ -114,9 +114,13 @@ function Error(e) {
 
 var numPlayers;
 
-function InitialDocument() {
+function InitialParameters() {
+  return { players: numPlayers };
+}
+
+function InitialDocument(o,p) {
 	var initialLife = [];
-	for (i = 0; i < numPlayers; i++) {
+	for (i = 0; i < p.players; i++) {
 		initialLife.push(20);
 	}
 
