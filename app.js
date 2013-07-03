@@ -80,23 +80,19 @@ function _loadDocument() {
 }
 
 function sendUpdates() {
-  var f = function(o,p) {
-    for (i = 0; i < p.length; i++)
-      p[i][0](o,p[i][1]);
-    return o;
-  };
+  if (functionQueue.length == 0)
+    return;
 
-  var p = JSON.parse(JSON.stringify(functionQueue));
-  functionQueue = [];
-
+  var p = functionQueue.shift();
   var s = function() {
+    sendUpdates();
   }
-
-  var e = function(e) {
-    functionQueue = p;
+  var e = function() {
+    functionQueue.unshift(p);
+    ReceiveUpdate(myDoc);
+    setTimeout(sendUpdates, 5000);
   }
-
-  documentApi.update(myDocId, f, p, s, e);
+  documentApi.update(myDocId, p[0], p[1], s, e);
 }
 
 // Optimistic apply
@@ -146,10 +142,10 @@ function DocumentCreated(doc) {
 }
 
 function ReceiveUpdate(doc) {
-  mydoc = doc;
+  myDoc = doc;
   for (i=0;i<functionQueue.length;i++) {
     var t = functionQueue[i];
-    t[0](mydoc, t[1]);
+    t[0](myDoc, t[1]);
   }
   Render(doc);
 }
@@ -173,7 +169,7 @@ function StartGame(players) {
 }
 
 function IncrementCounter(player, amount) {
-  var f = function(o,p){ o.life[p.player] = o.life[p.player] + p.amount; return doc; };
+  var f = function(o,p){ o.life[p.player] = o.life[p.player] + p.amount; return o; };
 	ApplyUpdate(f, { "player" : player, "amount" : amount });
 }
 
